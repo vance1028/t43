@@ -1,5 +1,3 @@
--- 容器首次初始化脚本（docker-entrypoint-initdb.d）= schema + seed 合并
-
 SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS students (
@@ -58,6 +56,62 @@ CREATE TABLE IF NOT EXISTS daily_menus (
     UNIQUE KEY uk_menu_date_meal (menu_date, meal)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS allergens (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    name        VARCHAR(64)  NOT NULL,
+    description VARCHAR(255) NOT NULL DEFAULT '',
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_allergens_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS student_allergens (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    student_id  BIGINT       NOT NULL,
+    allergen_id BIGINT       NOT NULL,
+    severity    VARCHAR(16)  NOT NULL DEFAULT 'MILD',
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_student_allergen (student_id, allergen_id),
+    KEY idx_sa_allergen (allergen_id),
+    CONSTRAINT fk_sa_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sa_allergen FOREIGN KEY (allergen_id) REFERENCES allergens (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS dishes (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    name        VARCHAR(128) NOT NULL,
+    description VARCHAR(500) NOT NULL DEFAULT '',
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_dishes_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS dish_allergens (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    dish_id     BIGINT       NOT NULL,
+    allergen_id BIGINT       NOT NULL,
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_dish_allergen (dish_id, allergen_id),
+    KEY idx_da_allergen (allergen_id),
+    CONSTRAINT fk_da_dish FOREIGN KEY (dish_id) REFERENCES dishes (id) ON DELETE CASCADE,
+    CONSTRAINT fk_da_allergen FOREIGN KEY (allergen_id) REFERENCES allergens (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS menu_dishes (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    menu_id     BIGINT       NOT NULL,
+    dish_id     BIGINT       NOT NULL,
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_menu_dish (menu_id, dish_id),
+    KEY idx_md_dish (dish_id),
+    CONSTRAINT fk_md_menu FOREIGN KEY (menu_id) REFERENCES daily_menus (id) ON DELETE CASCADE,
+    CONSTRAINT fk_md_dish FOREIGN KEY (dish_id) REFERENCES dishes (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS attendances (
     id           BIGINT       NOT NULL AUTO_INCREMENT,
     student_id   BIGINT       NOT NULL,
@@ -93,6 +147,54 @@ INSERT IGNORE INTO daily_menus (id, menu_date, meal, dishes) VALUES
   (1, '2026-06-05', 'LUNCH', '红烧鸡腿、清炒时蔬、紫菜蛋汤、米饭'),
   (2, '2026-06-05', 'DINNER', '番茄牛腩、蒜蓉西兰花、米饭'),
   (3, '2026-06-06', 'LUNCH', '糖醋里脊、麻婆豆腐、冬瓜汤、米饭');
+
+INSERT IGNORE INTO allergens (id, name, description) VALUES
+  (1, '花生', '花生及相关制品'),
+  (2, '海鲜', '鱼虾蟹贝等海产品'),
+  (3, '鸡蛋', '鸡蛋及含蛋制品'),
+  (4, '牛奶', '牛奶及乳制品'),
+  (5, '麸质', '含麸质谷物（小麦、大麦等）'),
+  (6, '大豆', '大豆及豆制品'),
+  (7, '坚果', '树坚果（核桃、杏仁等）');
+
+INSERT IGNORE INTO student_allergens (id, student_id, allergen_id, severity) VALUES
+  (1, 1, 1, 'FATAL'),
+  (2, 3, 2, 'SEVERE');
+
+INSERT IGNORE INTO dishes (id, name, description) VALUES
+  (1,  '红烧鸡腿',   ''),
+  (2,  '清炒时蔬',   ''),
+  (3,  '紫菜蛋汤',   ''),
+  (4,  '米饭',       ''),
+  (5,  '番茄牛腩',   ''),
+  (6,  '蒜蓉西兰花', ''),
+  (7,  '糖醋里脊',   ''),
+  (8,  '麻婆豆腐',   ''),
+  (9,  '冬瓜汤',     '');
+
+INSERT IGNORE INTO dish_allergens (dish_id, allergen_id) VALUES
+  (1, 1),
+  (1, 5),
+  (3, 2),
+  (3, 3),
+  (5, 5),
+  (7, 3),
+  (7, 5),
+  (8, 5),
+  (8, 6);
+
+INSERT IGNORE INTO menu_dishes (menu_id, dish_id) VALUES
+  (1, 1),
+  (1, 2),
+  (1, 3),
+  (1, 4),
+  (2, 5),
+  (2, 6),
+  (2, 4),
+  (3, 7),
+  (3, 8),
+  (3, 9),
+  (3, 4);
 
 INSERT IGNORE INTO attendances (id, student_id, attend_date, meal, status, picked_up_by, remark) VALUES
   (1, 1, '2026-06-05', 'LUNCH', 'PRESENT', '', '正常用餐'),

@@ -56,6 +56,62 @@ CREATE TABLE IF NOT EXISTS daily_menus (
     UNIQUE KEY uk_menu_date_meal (menu_date, meal)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS allergens (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    name        VARCHAR(64)  NOT NULL,
+    description VARCHAR(255) NOT NULL DEFAULT '',
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_allergens_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS student_allergens (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    student_id  BIGINT       NOT NULL,
+    allergen_id BIGINT       NOT NULL,
+    severity    VARCHAR(16)  NOT NULL DEFAULT 'MILD',
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_student_allergen (student_id, allergen_id),
+    KEY idx_sa_allergen (allergen_id),
+    CONSTRAINT fk_sa_student FOREIGN KEY (student_id) REFERENCES students (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sa_allergen FOREIGN KEY (allergen_id) REFERENCES allergens (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS dishes (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    name        VARCHAR(128) NOT NULL,
+    description VARCHAR(500) NOT NULL DEFAULT '',
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    updated_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_dishes_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS dish_allergens (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    dish_id     BIGINT       NOT NULL,
+    allergen_id BIGINT       NOT NULL,
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_dish_allergen (dish_id, allergen_id),
+    KEY idx_da_allergen (allergen_id),
+    CONSTRAINT fk_da_dish FOREIGN KEY (dish_id) REFERENCES dishes (id) ON DELETE CASCADE,
+    CONSTRAINT fk_da_allergen FOREIGN KEY (allergen_id) REFERENCES allergens (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS menu_dishes (
+    id          BIGINT       NOT NULL AUTO_INCREMENT,
+    menu_id     BIGINT       NOT NULL,
+    dish_id     BIGINT       NOT NULL,
+    created_at  DATETIME(3)  NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_menu_dish (menu_id, dish_id),
+    KEY idx_md_dish (dish_id),
+    CONSTRAINT fk_md_menu FOREIGN KEY (menu_id) REFERENCES daily_menus (id) ON DELETE CASCADE,
+    CONSTRAINT fk_md_dish FOREIGN KEY (dish_id) REFERENCES dishes (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS attendances (
     id           BIGINT       NOT NULL AUTO_INCREMENT,
     student_id   BIGINT       NOT NULL,

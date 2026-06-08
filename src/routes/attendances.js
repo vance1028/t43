@@ -25,7 +25,6 @@ router.get('/', wrap(async (req, res) => {
   res.json({ data: list, total: list.length });
 }));
 
-// 签到/考勤登记：同一学生同一天同一餐只能登记一次
 router.post('/', wrap(async (req, res) => {
   const b = req.body || {};
   const sid = toPositiveInt(b.studentId);
@@ -43,6 +42,15 @@ router.post('/', wrap(async (req, res) => {
     return sendError(res, 409, '该学生当天该餐次已登记');
   }
 
+  if (status === 'PRESENT' && await store.hasFatalConflict(sid, b.attendDate, meal)) {
+    const conflicts = await store.getStudentConflictsForAttendance(sid, b.attendDate, meal);
+    const fatalConflicts = conflicts.filter(c => c.severity === 'FATAL');
+    return sendError(res, 403, '该学生对此餐有致命级过敏冲突，禁止用餐', {
+      fatalConflicts,
+      suggestion: '请为该学生更换安全菜品或标记为缺席',
+    });
+  }
+
   const a = await store.createAttendance({
     studentId: sid,
     attendDate: b.attendDate,
@@ -51,7 +59,25 @@ router.post('/', wrap(async (req, res) => {
     pickedUpBy: b.pickedUpBy,
     remark: b.remark,
   });
-  res.status(201).json({ data: a });
+
+  let allergenWarning = null;
+  if (status === 'PRESENT') {
+    try {
+      const conflicts = await store.getStudentConflictsForAttendance(sid, b.attendDate, meal);
+      const nonFatal = conflicts.filter(c => c.severity !== 'FATAL');
+      if (nonFatal.length > 0) {
+        allergenWarning = {
+          hasNonFatalConflicts: true,
+          conflicts: nonFatal,
+        };
+      }
+    } catch (_) {}
+  }
+
+  res.status(201).json({
+    data: a,
+    ...(allergenWarning ? { allergenWarning } : {}),
+  });
 }));
 
 module.exports = router;

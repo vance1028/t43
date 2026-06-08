@@ -8,11 +8,11 @@ const plansRouter = require('./routes/plans');
 const enrollmentsRouter = require('./routes/enrollments');
 const menusRouter = require('./routes/menus');
 const attendancesRouter = require('./routes/attendances');
+const allergensRouter = require('./routes/allergens');
+const dishesRouter = require('./routes/dishes');
+const allergenCheckRouter = require('./routes/allergen-check');
 const { sendError } = require('./utils/http');
 
-/**
- * 创建 Express 应用。数据库连接与种子数据由调用方准备。
- */
 function createApp() {
   const app = express();
   app.use(cors());
@@ -31,15 +31,16 @@ function createApp() {
   app.use('/api/enrollments', enrollmentsRouter);
   app.use('/api/menus', menusRouter);
   app.use('/api/attendances', attendancesRouter);
+  app.use('/api/allergens', allergensRouter);
+  app.use('/api/dishes', dishesRouter);
+  app.use('/api/allergen-check', allergenCheckRouter);
 
   app.use((req, res) => sendError(res, 404, '接口不存在'));
 
-  // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => {
     if (err.type === 'entity.parse.failed') {
       return sendError(res, 400, '请求体不是合法的 JSON');
     }
-    // eslint-disable-next-line no-console
     console.error(err);
     return sendError(res, 500, '服务器内部错误');
   });
